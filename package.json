@@ -1,0 +1,40 @@
+{
+  "name": "image-compressor",
+  "version": "1.0.0",
+  "description": "Advanced Image Compression Tool",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "build:win": "electron-builder --win --x64"
+  },
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^27.0.0",
+    "electron-builder": "^24.6.4"
+  },
+  "build": {
+    "appId": "com.imagecompressor.app",
+    "productName": "Image Compressor",
+    "copyright": "Copyright © 2025",
+    "directories": {
+      "buildResources": ".",
+      "output": "dist"
+    },
+    "win": {
+      "target": "portable",
+      "icon": "app-icon.ico",
+      "requestedExecutionLevel": "asInvoker"
+    },
+    "portable": {
+      "artifactName": "ImageCompressor-Portable.exe"
+    },
+    "extraResources": [
+      {
+        "from": "compress.exe",
+        "to": "compress.exe"
+      }
+    ]
+  }
+}

@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Image Compressor</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px;
+    }
+    .container { background: white; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); padding: 40px; max-width: 640px; width: 100%; }
+    h1 { color: #333; margin-bottom: 10px; font-size: 28px; text-align: center; }
+    .subtitle { color: #666; text-align: center; margin-bottom: 30px; font-size: 14px; }
+
+    .upload-area { border: 3px dashed #667eea; border-radius: 12px; padding: 40px; text-align: center; cursor: pointer; transition: all 0.3s ease; background: #f8f9ff; margin-bottom: 25px; }
+    .upload-area:hover { border-color: #764ba2; background: #f0f2ff; }
+    .upload-area.dragover { border-color: #764ba2; background: #e8ebff; }
+    .upload-icon { font-size: 48px; margin-bottom: 15px; color: #667eea; }
+    .upload-text { color: #555; font-size: 16px; margin-bottom: 8px; }
+    .upload-subtext { color: #999; font-size: 13px; }
+
+    .preview-section { display: none; margin-bottom: 25px; }
+    .preview-container { position: relative; background: #f5f5f5; border-radius: 12px; padding: 20px; text-align: center; }
+    .preview-image { max-width: 100%; max-height: 300px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .file-info { margin-top: 15px; color: #666; font-size: 14px; }
+    .remove-btn { position: absolute; top: 10px; right: 10px; background: rgba(255,59,48,0.9); color: #fff; border: none; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; transition: background 0.2s; }
+    .remove-btn:hover { background: rgba(255,59,48,1); }
+
+    .controls { margin-bottom: 16px; }
+    .control-group { margin-bottom: 20px; }
+    label { display: block; color: #333; font-weight: 600; margin-bottom: 8px; font-size: 14px; }
+    .slider-container { position: relative; }
+    input[type="range"] { width: 100%; height: 8px; border-radius: 5px; background: #ddd; outline: none; -webkit-appearance: none; }
+    input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #667eea; cursor: pointer; transition: background 0.2s; }
+    input[type="range"]::-webkit-slider-thumb:hover { background: #764ba2; }
+    input[type="range"]::-moz-range-thumb { width: 20px; height: 20px; border-radius: 50%; background: #667eea; cursor: pointer; border: none; }
+    .quality-value { text-align: center; margin-top: 10px; font-size: 18px; font-weight: 600; color: #667eea; }
+    .quality-labels { display: flex; justify-content: space-between; margin-top: 5px; font-size: 12px; color: #999; }
+
+    select { width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 14px; background: white; cursor: pointer; transition: border-color 0.2s; }
+    select:focus { outline: none; border-color: #667eea; }
+
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    .btn {
+      width: 100%; padding: 14px; border: none; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; box-shadow: 0 4px 15px rgba(102,126,234,0.4);
+    }
+    .btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(102,126,234,0.6); }
+    .btn-secondary { background: #f0f2ff; color: #444; border: 2px solid #cfd5ff; }
+    .btn:disabled { background: #ccc; cursor: not-allowed; box-shadow: none; }
+
+    .progress-section { display: none; margin-top: 16px; }
+    .progress-bar { width: 100%; height: 6px; background: #e0e0e0; border-radius: 3px; overflow: hidden; margin-top: 10px; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); width: 0%; transition: width 0.3s ease; }
+    .status-text { text-align: center; color: #666; margin-top: 10px; font-size: 14px; }
+    .console-log { background: #f5f5f5; border: 1px solid #ddd; border-radius: 8px; padding: 15px; margin-top: 15px; max-height: 150px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 12px; color: #333; display: none; }
+    @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:.5;} }
+    .processing { animation: pulse 1.5s ease-in-out infinite; }
+    .result-line { text-align: center; margin-top: 10px; font-size: 14px; color: #333; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🖼️ Image Compressor</h1>
+    <p class="subtitle">Compress your images with advanced quality control</p>
+
+    <div class="upload-area" id="uploadArea">
+      <div class="upload-icon">📁</div>
+      <div class="upload-text">Click to select an image or drag & drop</div>
+      <div class="upload-subtext">Supports PNG, JPG, JPEG</div>
+    </div>
+
+    <div class="preview-section" id="previewSection">
+      <div class="preview-container">
+        <button class="remove-btn" id="removeBtn">×</button>
+        <img id="previewImage" class="preview-image" alt="Preview">
+        <div class="file-info" id="fileInfo"></div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="control-group">
+        <label for="qualitySlider">Compression Quality</label>
+        <div class="slider-container">
+          <input type="range" id="qualitySlider" min="0" max="100" value="80" step="1">
+          <div class="quality-value" id="qualityValue">0.80 (High Quality)</div>
+          <div class="quality-labels"><span>0.0 (Low)</span><span>1.0 (High)</span></div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="control-group">
+          <label for="formatSelect">Output Format</label>
+          <select id="formatSelect">
+            <option value="png">PNG (Lossless)</option>
+            <option value="jpg">JPEG (Lossy)</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <label>&nbsp;</label>
+          <button class="btn btn-secondary" id="saveBtn" disabled>Save As…</button>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" id="compressBtn" disabled>Select an image to compress</button>
+
+    <div class="progress-section" id="progressSection">
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="status-text" id="statusText">Processing...</div>
+      <div class="result-line" id="resultLine"></div>
+      <div class="console-log" id="consoleLog"></div>
+    </div>
+  </div>
+
+  <script>
+    const { ipcRenderer } = require('electron');
+    const path = require('path');
+    const fs = require('fs');
+
+    let selectedFilePath = null;
+    let originalFileName = '';
+    let lastTempOutput = null;
+
+    const uploadArea = document.getElementById('uploadArea');
+    const previewSection = document.getElementById('previewSection');
+    const previewImage = document.getElementById('previewImage');
+    const fileInfo = document.getElementById('fileInfo');
+    const removeBtn = document.getElementById('removeBtn');
+    const qualitySlider = document.getElementById('qualitySlider');
+    const qualityValue = document.getElementById('qualityValue');
+    const formatSelect = document.getElementById('formatSelect');
+    const compressBtn = document.getElementById('compressBtn');
+    const saveBtn = document.getElementById('saveBtn');
+    const progressSection = document.getElementById('progressSection');
+    const progressFill = document.getElementById('progressFill');
+    const statusText = document.getElementById('statusText');
+    const resultLine = document.getElementById('resultLine');
+    const consoleLog = document.getElementById('consoleLog');
+
+    // Open file dialog
+    uploadArea.addEventListener('click', async () => {
+      const filePath = await ipcRenderer.invoke('select-file');
+      if (filePath) handleFile(filePath);
+    });
+
+    // Drag & drop
+    uploadArea.addEventListener('dragover', (e) => { e.preventDefault(); uploadArea.classList.add('dragover'); });
+    uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
+    uploadArea.addEventListener('drop', (e) => {
+      e.preventDefault(); uploadArea.classList.remove('dragover');
+      if (e.dataTransfer.files.length > 0) handleFile(e.dataTransfer.files[0].path);
+    });
+
+    function handleFile(filePath) {
+      const validExts = ['.png', '.jpg', '.jpeg'];
+      const ext = path.extname(filePath).toLowerCase();
+      if (!validExts.includes(ext)) { alert('Please select a PNG or JPEG image.'); return; }
+
+      selectedFilePath = filePath;
+      originalFileName = path.basename(filePath, ext);
+
+      const fileData = fs.readFileSync(filePath);
+      const blob = new Blob([fileData]);
+      const url = URL.createObjectURL(blob);
+
+      previewImage.src = url;
+      previewSection.style.display = 'block';
+      uploadArea.style.display = 'none';
+
+      const stats = fs.statSync(filePath);
+      const sizeMB = (stats.size / 1024 / 1024).toFixed(2);
+      fileInfo.textContent = `${path.basename(filePath)} - ${sizeMB} MB`;
+
+      compressBtn.disabled = false;
+      compressBtn.textContent = 'Compress Image';
+      saveBtn.disabled = true;
+      resultLine.textContent = '';
+    }
+
+    removeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      selectedFilePath = null;
+      originalFileName = '';
+      lastTempOutput = null;
+      previewSection.style.display = 'none';
+      uploadArea.style.display = 'block';
+      compressBtn.disabled = true;
+      compressBtn.textContent = 'Select an image to compress';
+      saveBtn.disabled = true;
+      progressSection.style.display = 'none';
+      consoleLog.style.display = 'none';
+      resultLine.textContent = '';
+    });
+
+    qualitySlider.addEventListener('input', (e) => {
+      const value = e.target.value;
+      const normalizedValue = (value / 100).toFixed(2);
+      let qualityText = '';
+      if (value >= 80) qualityText = 'Very High Quality';
+      else if (value >= 60) qualityText = 'High Quality';
+      else if (value >= 40) qualityText = 'Medium Quality';
+      else if (value >= 20) qualityText = 'Low Quality';
+      else qualityText = 'Very Low Quality';
+      qualityValue.textContent = `${normalizedValue} (${qualityText})`;
+    });
+
+    // Compress -> to TEMP preview
+    compressBtn.addEventListener('click', async () => {
+      if (!selectedFilePath) return;
+
+      compressBtn.disabled = true;
+      saveBtn.disabled = true;
+      progressSection.style.display = 'block';
+      consoleLog.style.display = 'block';
+      consoleLog.textContent = '';
+      statusText.classList.add('processing');
+      statusText.textContent = 'Starting compression...';
+      resultLine.textContent = '';
+      progressFill.style.width = '20%';
+
+      try {
+        const quality = qualitySlider.value / 100;
+        const format = formatSelect.value;
+
+        statusText.textContent = 'Compressing image...';
+        progressFill.style.width = '60%';
+
+        const result = await ipcRenderer.invoke('compress-image', selectedFilePath, quality, format);
+
+        progressFill.style.width = '100%';
+
+        if (result.success) {
+          lastTempOutput = result.tempOutput;  // save path to preview file
+          const inputSizeMB = (result.inputSize / 1024 / 1024).toFixed(2);
+          const outputSizeMB = (result.outputSize / 1024 / 1024).toFixed(2);
+          const reduction = (((result.inputSize - result.outputSize) / result.inputSize) * 100).toFixed(1);
+
+          statusText.textContent = '✓ Preview ready';
+          statusText.classList.remove('processing');
+          resultLine.textContent = `${inputSizeMB} MB → ${outputSizeMB} MB (${reduction}% smaller)`;
+          consoleLog.textContent = result.log || 'Compression completed successfully!';
+
+          compressBtn.disabled = false;
+          compressBtn.textContent = 'Compress Again';
+          saveBtn.disabled = false; // enable Save As… now
+        } else {
+          throw new Error(result.error);
+        }
+      } catch (err) {
+        statusText.textContent = '✗ Error: ' + err.message;
+        statusText.classList.remove('processing');
+        consoleLog.textContent = err.message;
+        progressFill.style.width = '0%';
+        compressBtn.disabled = false;
+        compressBtn.textContent = 'Try Again';
+        saveBtn.disabled = true;
+      }
+    });
+
+    // Save As… (copy from TEMP to user-selected path)
+    saveBtn.addEventListener('click', async () => {
+      if (!lastTempOutput) return;
+      const format = formatSelect.value;
+      const suggestedName = `${originalFileName}_compressed.${format}`;
+
+      const res = await ipcRenderer.invoke('save-compressed', lastTempOutput, suggestedName, format);
+      if (res.success) {
+        statusText.textContent = '✅ Saved: ' + res.savedPath;
+      } else if (res.canceled) {
+        statusText.textContent = 'Save canceled.';
+      } else {
+        statusText.textContent = '✗ Save failed: ' + (res.error || 'Unknown error');
+      }
+    });
+
+    // Log streaming output from the compressor
+    ipcRenderer.on('compression-progress', (event, message) => {
+      consoleLog.textContent += message + '\n';
+      consoleLog.scrollTop = consoleLog.scrollHeight;
+    });
+  </script>
+</body>
+</html>
